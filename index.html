@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Neon Highway Racer</title>
+  <style>
+    :root {
+      --ink: #f8fafc;
+      --muted: #a8b3c7;
+      --panel: rgba(9, 14, 24, 0.82);
+      --panel-strong: rgba(5, 9, 16, 0.95);
+      --accent: #20e3b2;
+      --accent-2: #ffcf4a;
+      --danger: #ff4d6d;
+      --road-edge: #152033;
+      --button: #172238;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #080c12;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      touch-action: none;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(32, 227, 178, 0.18), transparent 24rem),
+        radial-gradient(circle at 82% 82%, rgba(255, 207, 74, 0.12), transparent 28rem),
+        linear-gradient(135deg, #070a10, #0f1724 48%, #080b11);
+    }
+
+    #gameShell {
+      position: relative;
+      width: min(100vw, 720px);
+      height: 100dvh;
+      max-height: 960px;
+      min-height: 560px;
+      background: #070b12;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #0b1220;
+    }
+
+    .hud {
+      position: absolute;
+      inset: 12px 12px auto 12px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .hudGroup {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .pill {
+      min-width: 86px;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(6, 11, 19, 0.65);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(10px);
+    }
+
+    .pill span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .pill strong {
+      display: block;
+      margin-top: 2px;
+      font-size: clamp(18px, 4.4vw, 24px);
+      line-height: 1;
+    }
+
+    .topButtons {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .iconButton,
+    .menuButton,
+    .touchButton {
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: var(--ink);
+      background: linear-gradient(180deg, rgba(30, 43, 68, 0.96), rgba(18, 27, 44, 0.96));
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+      cursor: pointer;
+      font: inherit;
+      user-select: none;
+    }
+
+    .iconButton {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      font-size: 20px;
+      display: grid;
+      place-items: center;
+    }
+
+    .iconButton:active,
+    .menuButton:active,
+    .touchButton:active {
+      transform: translateY(1px);
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background:
+        linear-gradient(180deg, rgba(6, 9, 14, 0.36), rgba(6, 9, 14, 0.82)),
+        radial-gradient(circle at 50% 32%, rgba(32, 227, 178, 0.14), transparent 22rem);
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    .menuPanel {
+      width: min(100%, 520px);
+      padding: clamp(18px, 4vw, 30px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      margin: 0 0 6px;
+      font-size: clamp(36px, 10vw, 64px);
+      line-height: 0.9;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .statsLine {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .menuStat {
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .menuStat b,
+    .menuStat span {
+      display: block;
+    }
+
+    .menuStat b {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .menuStat span {
+      margin-top: 5px;
+      font-size: 20px;
+      font-weight: 850;
+    }
+
+    .sectionTitle {
+      margin: 18px 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .carGrid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .carChoice {
+      min-height: 94px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.06);
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .carChoice.active {
+      border-color: rgba(32, 227, 178, 0.85);
+      box-shadow: inset 0 0 0 1px rgba(32, 227, 178, 0.45), 0 0 26px rgba(32, 227, 178, 0.13);
+    }
+
+    .carPreview {
+      width: 36px;
+      height: 58px;
+      margin: 0 auto 8px;
+      border-radius: 12px 12px 9px 9px;
+      position: relative;
+      box-shadow: inset 0 7px 0 rgba(255, 255, 255, 0.23), 0 11px 22px rgba(0, 0, 0, 0.3);
+    }
+
+    .carPreview::before,
+    .carPreview::after {
+      content: "";
+      position: absolute;
+      top: 12px;
+      width: 7px;
+      height: 34px;
+      border-radius: 4px;
+      background: rgba(3, 8, 14, 0.78);
+    }
+
+    .carPreview::before {
+      left: -5px;
+    }
+
+    .carPreview::after {
+      right: -5px;
+    }
+
+    .carChoice span {
+      display: block;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .buttonRow {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    .menuButton {
+      flex: 1 1 145px;
+      min-height: 48px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+    }
+
+    .menuButton.primary {
+      color: #03100d;
+      border-color: rgba(32, 227, 178, 0.6);
+      background: linear-gradient(180deg, #35f4c4, #16cfa0);
+    }
+
+    .menuButton.gold {
+      color: #171004;
+      border-color: rgba(255, 207, 74, 0.75);
+      background: linear-gradient(180deg, #ffe07a, #ffb82f);
+    }
+
+    .hint {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .countdown {
+      position: absolute;
+      inset: 0;
+      z-index: 9;
+      display: none;
+      place-items: center;
+      color: white;
+      font-size: clamp(76px, 22vw, 156px);
+      font-weight: 950;
+      text-shadow: 0 16px 48px rgba(0, 0, 0, 0.75);
+      pointer-events: none;
+    }
+
+    .countdown.show {
+      display: grid;
+    }
+
+    .touchControls {
+      position: absolute;
+      inset: auto 12px 16px 12px;
+      z-index: 6;
+      display: none;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .touchCluster {
+      display: grid;
+      grid-template-columns: repeat(2, 58px);
+      grid-template-rows: repeat(2, 58px);
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .touchButton {
+      width: 58px;
+      height: 58px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      background: rgba(16, 25, 41, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .touchButton.wide {
+      width: 78px;
+      height: 78px;
+      font-size: 16px;
+      font-weight: 950;
+      color: #171004;
+      background: linear-gradient(180deg, rgba(255, 225, 120, 0.92), rgba(255, 184, 47, 0.92));
+    }
+
+    .touchButton[data-key="up"] {
+      grid-column: 1 / 3;
+      justify-self: center;
+    }
+
+    @media (hover: none), (pointer: coarse), (max-width: 760px) {
+      .touchControls {
+        display: flex;
+      }
+
+      .hud {
+        inset: 8px 8px auto 8px;
+      }
+
+      .pill {
+        min-width: 72px;
+        padding: 7px 8px;
+      }
+    }
+
+    @media (max-width: 460px) {
+      #gameShell {
+        width: 100vw;
+        height: 100dvh;
+        min-height: 100dvh;
+      }
+
+      .menuPanel {
+        padding: 16px;
+      }
+
+      .statsLine {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .carGrid {
+        grid-template-columns: 1fr;
+      }
+
+      .carChoice {
+        min-height: 74px;
+        display: grid;
+        grid-template-columns: 48px 1fr;
+        align-items: center;
+        text-align: left;
+      }
+
+      .carPreview {
+        margin: 0;
+        transform: scale(0.82);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="gameShell" aria-label="Neon Highway Racer">
+    <canvas id="gameCanvas"></canvas>
+
+    <section class="hud" aria-live="polite">
+      <div class="hudGroup">
+        <div class="pill"><span>Score</span><strong id="scoreValue">0</strong></div>
+        <div class="pill"><span>Coins</span><strong id="coinValue">0</strong></div>
+        <div class="pill"><span>Level</span><strong id="levelValue">1</strong></div>
+      </div>
+      <div class="topButtons">
+        <button id="soundButton" class="iconButton" type="button" title="Sound">♪</button>
+        <button id="pauseButton" class="iconButton" type="button" title="Pause">Ⅱ</button>
+      </div>
+    </section>
+
+    <div id="countdown" class="countdown">3</div>
+
+    <section id="startOverlay" class="overlay">
+      <div class="menuPanel">
+        <h1 class="brand">Neon Highway</h1>
+        <p class="subtitle">Weave through traffic, grab coins, and trigger nitro bursts as the highway gets faster every level.</p>
+        <div class="statsLine">
+          <div class="menuStat"><b>Best</b><span id="menuBest">0</span></div>
+          <div class="menuStat"><b>Coins</b><span id="menuCoins">0</span></div>
+          <div class="menuStat"><b>Mode</b><span>Solo</span></div>
+        </div>
+        <p class="sectionTitle">Choose Car</p>
+        <div id="carGrid" class="carGrid"></div>
+        <div class="buttonRow">
+          <button id="startButton" class="menuButton primary" type="button">Start Race</button>
+          <button id="resetBestButton" class="menuButton" type="button">Reset Best</button>
+        </div>
+        <p class="hint">Arrow keys steer and accelerate. Space uses nitro. Mobile controls appear on touch screens.</p>
+      </div>
+    </section>
+
+    <section id="pauseOverlay" class="overlay hidden">
+      <div class="menuPanel">
+        <h2 class="brand">Paused</h2>
+        <p class="subtitle">Take a breath. The highway will wait right where you left it.</p>
+        <div class="buttonRow">
+          <button id="resumeButton" class="menuButton primary" type="button">Resume</button>
+          <button id="pauseRestartButton" class="menuButton" type="button">Restart</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameOverOverlay" class="overlay hidden">
+      <div class="menuPanel">
+        <h2 class="brand">Game Over</h2>
+        <p id="gameOverText" class="subtitle">Final score: 0</p>
+        <div class="statsLine">
+          <div class="menuStat"><b>Score</b><span id="finalScore">0</span></div>
+          <div class="menuStat"><b>Best</b><span id="finalBest">0</span></div>
+          <div class="menuStat"><b>Coins</b><span id="finalCoins">0</span></div>
+        </div>
+        <div class="buttonRow">
+          <button id="restartButton" class="menuButton primary" type="button">Restart</button>
+          <button id="changeCarButton" class="menuButton gold" type="button">Change Car</button>
+        </div>
+      </div>
+    </section>
+
+    <nav class="touchControls" aria-label="Touch driving controls">
+      <div class="touchCluster">
+        <button class="touchButton" data-key="up" type="button" aria-label="Accelerate">▲</button>
+        <button class="touchButton" data-key="left" type="button" aria-label="Steer left">◀</button>
+        <button class="touchButton" data-key="right" type="button" aria-label="Steer right">▶</button>
+      </div>
+      <button class="touchButton wide" data-key="nitro" type="button" aria-label="Nitro boost">NITRO</button>
+    </nav>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      const shell = document.getElementById("gameShell");
+
+      const ui = {
+        score: document.getElementById("scoreValue"),
+        coins: document.getElementById("coinValue"),
+        level: document.getElementById("levelValue"),
+        menuBest: document.getElementById("menuBest"),
+        menuCoins: document.getElementById("menuCoins"),
+        startOverlay: document.getElementById("startOverlay"),
+        pauseOverlay: document.getElementById("pauseOverlay"),
+        gameOverOverlay: document.getElementById("gameOverOverlay"),
+        countdown: document.getElementById("countdown"),
+        carGrid: document.getElementById("carGrid"),
+        finalScore: document.getElementById("finalScore"),
+        finalBest: document.getElementById("finalBest"),
+        finalCoins: document.getElementById("finalCoins"),
+        gameOverText: document.getElementById("gameOverText"),
+        pauseButton: document.getElementById("pauseButton"),
+        soundButton: document.getElementById("soundButton")
+      };
+
+      const storage = {
+        best: "neonHighwayBest",
+        coins: "neonHighwayCoins",
+        car: "neonHighwayCar",
+        muted: "neonHighwayMuted"
+      };
+
+      const cars = [
+        { name: "Comet", body: "#20e3b2", trim: "#dffdf6", speed: 1.02, grip: 0.97 },
+        { name: "Vector", body: "#ff4d6d", trim: "#ffe3e8", speed: 0.98, grip: 1.08 },
+        { name: "Bolt", body: "#ffcf4a", trim: "#fff4c8", speed: 1.08, grip: 0.92 }
+      ];
+
+      const enemyColors = ["#ef476f", "#118ab2", "#f77f00", "#8ecae6", "#e63946", "#7bd88f"];
+      const keys = new Set();
+
+      let width = 0;
+      let height = 0;
+      let dpr = 1;
+      let road = {};
+      let lastTime = 0;
+      let animationId = 0;
+      let selectedCar = Number(localStorage.getItem(storage.car) || 0);
+      let highScore = Number(localStorage.getItem(storage.best) || 0);
+      let bankCoins = Number(localStorage.getItem(storage.coins) || 0);
+      let muted = localStorage.getItem(storage.muted) === "true";
+      let state = "menu";
+      let audio = null;
+
+      const game = {
+        player: null,
+        enemies: [],
+        coins: [],
+        sparks: [],
+        laneMarkers: [],
+        scenery: [],
+        score: 0,
+        runCoins: 0,
+        level: 1,
+        roadSpeed: 330,
+        spawnTimer: 0,
+        coinTimer: 0,
+        nitro: 100,
+        nitroActive: 0,
+        invulnerable: 0,
+        shake: 0,
+        distance: 0,
+        levelFlash: 0
+      };
+
+      function resize() {
+        const rect = shell.getBoundingClientRect();
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = Math.max(320, Math.floor(rect.width));
+        height = Math.max(560, Math.floor(rect.height));
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        road = {
+          center: width / 2,
+          topWidth: width * 0.48,
+          bottomWidth: Math.min(width * 0.78, 520),
+          horizon: height * 0.06,
+          bottom: height
+        };
+        buildRoadDecor();
+        if (game.player) clampPlayer();
+      }
+
+      function roadWidthAt(y) {
+        const t = Math.min(1, Math.max(0, (y - road.horizon) / (road.bottom - road.horizon)));
+        return road.topWidth + (road.bottomWidth - road.topWidth) * (t * 0.92 + 0.08);
+      }
+
+      function roadLeftAt(y) {
+        return road.center - roadWidthAt(y) / 2;
+      }
+
+      function buildRoadDecor() {
+        game.laneMarkers = [];
+        const spacing = 92;
+        for (let y = -spacing; y < height + spacing; y += spacing) {
+          game.laneMarkers.push({ y });
+        }
+        game.scenery = [];
+        for (let i = 0; i < 24; i++) {
+          game.scenery.push({
+            side: i % 2 ? 1 : -1,
+            y: Math.random() * height,
+            size: 12 + Math.random() * 28,
+            hue: Math.random() > 0.5 ? "#20e3b2" : "#ffcf4a"
+          });
+        }
+      }
+
+      function makePlayer() {
+        const car = cars[selectedCar];
+        return {
+          x: road.center,
+          y: height * 0.78,
+          w: Math.max(34, width * 0.075),
+          h: Math.max(66, height * 0.105),
+          vx: 0,
+          vy: 0,
+          color: car.body,
+          trim: car.trim,
+          speedStat: car.speed,
+          grip: car.grip
+        };
+      }
+
+      function resetGame() {
+        game.player = makePlayer();
+        game.enemies = [];
+        game.coins = [];
+        game.sparks = [];
+        game.score = 0;
+        game.runCoins = 0;
+        game.level = 1;
+        game.roadSpeed = 330;
+        game.spawnTimer = 0.55;
+        game.coinTimer = 0.9;
+        game.nitro = 100;
+        game.nitroActive = 0;
+        game.invulnerable = 1.2;
+        game.shake = 0;
+        game.distance = 0;
+        game.levelFlash = 0;
+        updateHud();
+      }
+
+      function renderCarChoices() {
+        ui.carGrid.innerHTML = "";
+        cars.forEach((car, index) => {
+          const button = document.createElement("button");
+          button.className = "carChoice" + (index === selectedCar ? " active" : "");
+          button.type = "button";
+          button.innerHTML = `<div class="carPreview" style="background:${car.body}"></div><span>${car.name}</span>`;
+          button.addEventListener("click", () => {
+            selectedCar = index;
+            localStorage.setItem(storage.car, String(index));
+            renderCarChoices();
+          });
+          ui.carGrid.appendChild(button);
+        });
+      }
+
+      function updateHud() {
+        ui.score.textContent = String(Math.floor(game.score));
+        ui.coins.textContent = String(game.runCoins);
+        ui.level.textContent = String(game.level);
+        ui.menuBest.textContent = String(Math.floor(highScore));
+        ui.menuCoins.textContent = String(bankCoins);
+      }
+
+      function showOnly(overlay) {
+        ui.startOverlay.classList.add("hidden");
+        ui.pauseOverlay.classList.add("hidden");
+        ui.gameOverOverlay.classList.add("hidden");
+        if (overlay) overlay.classList.remove("hidden");
+      }
+
+      function startRace() {
+        ensureAudio();
+        if (audio) audio.context.resume();
+        resetGame();
+        showOnly(null);
+        state = "countdown";
+        let n = 3;
+        ui.countdown.textContent = String(n);
+        ui.countdown.classList.add("show");
+        playBeep(380, 0.08, "square", 0.08);
+        const timer = setInterval(() => {
+          n -= 1;
+          if (n > 0) {
+            ui.countdown.textContent = String(n);
+            playBeep(420 + n * 70, 0.08, "square", 0.08);
+          } else {
+            clearInterval(timer);
+            ui.countdown.textContent = "GO";
+            playBeep(720, 0.18, "sawtooth", 0.1);
+            setTimeout(() => {
+              ui.countdown.classList.remove("show");
+              state = "playing";
+              lastTime = performance.now();
+              setEngine(true);
+            }, 420);
+          }
+        }, 720);
+      }
+
+      function pauseGame() {
+        if (state !== "playing") return;
+        state = "paused";
+        setEngine(false);
+        showOnly(ui.pauseOverlay);
+      }
+
+      function resumeGame() {
+        if (state !== "paused") return;
+        state = "playing";
+        lastTime = performance.now();
+        setEngine(true);
+        showOnly(null);
+      }
+
+      function gameOver() {
+        state = "gameover";
+        setEngine(false);
+        playCrash();
+        highScore = Math.max(highScore, Math.floor(game.score));
+        bankCoins += game.runCoins;
+        localStorage.setItem(storage.best, String(highScore));
+        localStorage.setItem(storage.coins, String(bankCoins));
+        ui.finalScore.textContent = String(Math.floor(game.score));
+        ui.finalBest.textContent = String(Math.floor(highScore));
+        ui.finalCoins.textContent = String(game.runCoins);
+        ui.gameOverText.textContent = game.score >= highScore ? "New best run." : "Final score: " + Math.floor(game.score);
+        updateHud();
+        showOnly(ui.gameOverOverlay);
+      }
+
+      function randomRoadX(y, margin = 36) {
+        const left = roadLeftAt(y) + margin;
+        const right = left + roadWidthAt(y) - margin * 2;
+        return left + Math.random() * Math.max(20, right - left);
+      }
+
+      function spawnEnemy() {
+        const y = -90;
+        const w = Math.max(34, width * (0.065 + Math.random() * 0.025));
+        const h = w * (1.72 + Math.random() * 0.25);
+        game.enemies.push({
+          x: randomRoadX(height * 0.38),
+          y,
+          w,
+          h,
+          vy: game.roadSpeed * (0.72 + Math.random() * 0.42),
+          drift: (Math.random() - 0.5) * 28,
+          color: enemyColors[Math.floor(Math.random() * enemyColors.length)],
+          trim: "#eef6ff"
+        });
+      }
+
+      function spawnCoin() {
+        const y = -34;
+        game.coins.push({
+          x: randomRoadX(height * 0.45, 52),
+          y,
+          r: 12,
+          vy: game.roadSpeed * 0.96,
+          spin: Math.random() * Math.PI
+        });
+      }
+
+      function clampPlayer() {
+        const p = game.player;
+        const left = roadLeftAt(p.y) + p.w * 0.58;
+        const right = roadLeftAt(p.y) + roadWidthAt(p.y) - p.w * 0.58;
+        p.x = Math.min(right, Math.max(left, p.x));
+        p.y = Math.min(height - p.h * 0.52, Math.max(height * 0.3, p.y));
+      }
+
+      function update(dt) {
+        if (state !== "playing") return;
+        const p = game.player;
+        const levelTarget = 1 + Math.floor(game.score / 650);
+        if (levelTarget > game.level) {
+          game.level = levelTarget;
+          game.levelFlash = 1.2;
+          playBeep(760, 0.12, "triangle", 0.08);
+        }
+
+        const boostHeld = keys.has("nitro") || keys.has(" ");
+        const canBoost = boostHeld && game.nitro > 0;
+        game.nitroActive = canBoost ? Math.min(1, game.nitroActive + dt * 4) : Math.max(0, game.nitroActive - dt * 3);
+        if (canBoost) game.nitro = Math.max(0, game.nitro - dt * 34);
+        else game.nitro = Math.min(100, game.nitro + dt * 8);
+
+        const speedFactor = 1 + (game.level - 1) * 0.09 + game.nitroActive * 0.42;
+        game.roadSpeed = (330 + game.level * 22) * speedFactor;
+        game.distance += game.roadSpeed * dt;
+        game.score += dt * (48 + game.level * 8) * (1 + game.nitroActive * 0.7);
+
+        let ax = 0;
+        let ay = 0;
+        if (keys.has("ArrowLeft") || keys.has("left")) ax -= 1;
+        if (keys.has("ArrowRight") || keys.has("right")) ax += 1;
+        if (keys.has("ArrowUp") || keys.has("up")) ay -= 1;
+        if (keys.has("ArrowDown") || keys.has("down")) ay += 1;
+
+        const steerPower = 1320 * p.grip;
+        const verticalPower = 760 * p.speedStat;
+        p.vx += ax * steerPower * dt;
+        p.vy += ay * verticalPower * dt;
+        p.vx *= Math.pow(0.0008, dt);
+        p.vy *= Math.pow(0.002, dt);
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        clampPlayer();
+
+        game.spawnTimer -= dt;
+        const spawnGap = Math.max(0.34, 1.02 - game.level * 0.055);
+        if (game.spawnTimer <= 0) {
+          spawnEnemy();
+          game.spawnTimer = spawnGap + Math.random() * 0.42;
+        }
+
+        game.coinTimer -= dt;
+        if (game.coinTimer <= 0) {
+          spawnCoin();
+          game.coinTimer = Math.max(0.55, 1.45 - game.level * 0.035) + Math.random() * 0.85;
+        }
+
+        for (const marker of game.laneMarkers) {
+          marker.y += game.roadSpeed * dt;
+          if (marker.y > height + 110) marker.y -= height + 220;
+        }
+
+        for (const prop of game.scenery) {
+          prop.y += game.roadSpeed * 0.64 * dt;
+          if (prop.y > height + 50) {
+            prop.y = -50;
+            prop.size = 12 + Math.random() * 28;
+          }
+        }
+
+        for (const enemy of game.enemies) {
+          enemy.y += enemy.vy * dt;
+          enemy.x += Math.sin((enemy.y + game.distance) * 0.008) * enemy.drift * dt;
+        }
+        game.enemies = game.enemies.filter(enemy => enemy.y < height + enemy.h);
+
+        for (const coin of game.coins) {
+          coin.y += coin.vy * dt;
+          coin.spin += dt * 8;
+        }
+        game.coins = game.coins.filter(coin => coin.y < height + 40);
+
+        game.sparks.forEach(spark => {
+          spark.x += spark.vx * dt;
+          spark.y += spark.vy * dt;
+          spark.life -= dt;
+        });
+        game.sparks = game.sparks.filter(spark => spark.life > 0);
+
+        game.invulnerable = Math.max(0, game.invulnerable - dt);
+        game.shake = Math.max(0, game.shake - dt * 18);
+        game.levelFlash = Math.max(0, game.levelFlash - dt);
+
+        handlePickups();
+        handleCollisions();
+        updateEnginePitch();
+        updateHud();
+      }
+
+      function carRect(car, scale = 0.68) {
+        return {
+          x: car.x - car.w * scale / 2,
+          y: car.y - car.h * scale / 2,
+          w: car.w * scale,
+          h: car.h * scale
+        };
+      }
+
+      function rectsOverlap(a, b) {
+        return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+      }
+
+      function handleCollisions() {
+        if (game.invulnerable > 0) return;
+        const pRect = carRect(game.player, 0.72);
+        for (const enemy of game.enemies) {
+          if (rectsOverlap(pRect, carRect(enemy, 0.75))) {
+            game.shake = 12;
+            burst(game.player.x, game.player.y, "#ff4d6d", 34);
+            gameOver();
+            return;
+          }
+        }
+      }
+
+      function handlePickups() {
+        const p = game.player;
+        for (const coin of game.coins) {
+          const dx = p.x - coin.x;
+          const dy = p.y - coin.y;
+          if (Math.hypot(dx, dy) < p.w * 0.7 + coin.r) {
+            coin.y = height + 100;
+            game.runCoins += 1;
+            game.score += 45;
+            game.nitro = Math.min(100, game.nitro + 12);
+            burst(coin.x, coin.y, "#ffcf4a", 12);
+            playCoin();
+          }
+        }
+      }
+
+      function burst(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 80 + Math.random() * 260;
+          game.sparks.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 0.25 + Math.random() * 0.55,
+            color
+          });
+        }
+      }
+
+      function draw() {
+        ctx.save();
+        if (game.shake > 0) {
+          ctx.translate((Math.random() - 0.5) * game.shake, (Math.random() - 0.5) * game.shake);
+        }
+        drawWorld();
+        drawRoad();
+        drawPickups();
+        drawCars();
+        drawEffects();
+        drawNitroMeter();
+        if (game.levelFlash > 0) drawLevelFlash();
+        ctx.restore();
+      }
+
+      function drawWorld() {
+        const sky = ctx.createLinearGradient(0, 0, 0, height);
+        sky.addColorStop(0, "#0b1524");
+        sky.addColorStop(0.48, "#101827");
+        sky.addColorStop(1, "#071017");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.fillStyle = "#07111c";
+        ctx.beginPath();
+        ctx.moveTo(0, height * 0.3);
+        for (let x = 0; x <= width; x += 34) {
+          const y = height * 0.25 + Math.sin(x * 0.045) * 18 + (x % 82);
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(width, height);
+        ctx.lineTo(0, height);
+        ctx.closePath();
+        ctx.fill();
+
+        for (const prop of game.scenery) {
+          const sideX = prop.side < 0 ? roadLeftAt(prop.y) - prop.size * 2.4 : roadLeftAt(prop.y) + roadWidthAt(prop.y) + prop.size * 1.3;
+          ctx.fillStyle = "rgba(0,0,0,0.28)";
+          ctx.fillRect(sideX - 3, prop.y + prop.size, 6, prop.size * 2);
+          ctx.fillStyle = prop.hue;
+          ctx.globalAlpha = 0.72;
+          ctx.beginPath();
+          ctx.moveTo(sideX, prop.y);
+          ctx.lineTo(sideX - prop.size * 0.75, prop.y + prop.size * 1.35);
+          ctx.lineTo(sideX + prop.size * 0.75, prop.y + prop.size * 1.35);
+          ctx.closePath();
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      function drawRoad() {
+        const leftBottom = roadLeftAt(height);
+        const rightBottom = leftBottom + roadWidthAt(height);
+        const leftTop = roadLeftAt(road.horizon);
+        const rightTop = leftTop + roadWidthAt(road.horizon);
+
+        ctx.fillStyle = "#111827";
+        ctx.beginPath();
+        ctx.moveTo(leftTop, road.horizon);
+        ctx.lineTo(rightTop, road.horizon);
+        ctx.lineTo(rightBottom, height);
+        ctx.lineTo(leftBottom, height);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = "#20e3b2";
+        ctx.lineWidth = 4;
+        ctx.globalAlpha = 0.82;
+        ctx.beginPath();
+        ctx.moveTo(leftTop, road.horizon);
+        ctx.lineTo(leftBottom, height);
+        ctx.moveTo(rightTop, road.horizon);
+        ctx.lineTo(rightBottom, height);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = "rgba(255,255,255,0.62)";
+        const lanes = 3;
+        for (let lane = 1; lane < lanes; lane++) {
+          for (const marker of game.laneMarkers) {
+            const y = marker.y;
+            const w = roadWidthAt(y);
+            const left = roadLeftAt(y);
+            const x = left + (w / lanes) * lane;
+            const y2 = y + 42;
+            const w2 = roadWidthAt(y2);
+            const left2 = roadLeftAt(y2);
+            const x2 = left2 + (w2 / lanes) * lane;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+          }
+        }
+
+        ctx.fillStyle = "rgba(255,255,255,0.05)";
+        for (let i = 0; i < 8; i++) {
+          const y = (i / 8) * height + (game.distance * 0.08) % 90;
+          ctx.fillRect(roadLeftAt(y) + 14, y, roadWidthAt(y) - 28, 1);
+        }
+      }
+
+      function drawPickups() {
+        for (const coin of game.coins) {
+          const sx = Math.max(0.25, Math.abs(Math.cos(coin.spin)));
+          ctx.save();
+          ctx.translate(coin.x, coin.y);
+          ctx.scale(sx, 1);
+          ctx.fillStyle = "#ffcf4a";
+          ctx.beginPath();
+          ctx.arc(0, 0, coin.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#fff3a8";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.fillStyle = "rgba(90,55,0,0.34)";
+          ctx.fillRect(-2, -coin.r * 0.55, 4, coin.r * 1.1);
+          ctx.restore();
+        }
+      }
+
+      function drawCars() {
+        for (const enemy of game.enemies) drawCar(enemy, false);
+        if (game.player) drawCar(game.player, true);
+      }
+
+      function drawCar(car, player) {
+        ctx.save();
+        ctx.translate(car.x, car.y);
+        const tilt = Math.max(-0.12, Math.min(0.12, (car.vx || 0) / 1200));
+        ctx.rotate(tilt);
+
+        if (player && game.nitroActive > 0.05) {
+          ctx.globalAlpha = 0.28 + game.nitroActive * 0.28;
+          ctx.fillStyle = "#20e3b2";
+          ctx.beginPath();
+          ctx.moveTo(-car.w * 0.28, car.h * 0.42);
+          ctx.lineTo(0, car.h * (0.75 + Math.random() * 0.18));
+          ctx.lineTo(car.w * 0.28, car.h * 0.42);
+          ctx.closePath();
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+
+        ctx.fillStyle = "rgba(0,0,0,0.34)";
+        ctx.beginPath();
+        ctx.ellipse(0, car.h * 0.28, car.w * 0.58, car.h * 0.36, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#05080f";
+        roundRect(-car.w * 0.58, -car.h * 0.3, car.w * 0.18, car.h * 0.45, 5);
+        roundRect(car.w * 0.4, -car.h * 0.3, car.w * 0.18, car.h * 0.45, 5);
+        roundRect(-car.w * 0.58, car.h * 0.16, car.w * 0.18, car.h * 0.33, 5);
+        roundRect(car.w * 0.4, car.h * 0.16, car.w * 0.18, car.h * 0.33, 5);
+
+        const bodyGradient = ctx.createLinearGradient(0, -car.h / 2, 0, car.h / 2);
+        bodyGradient.addColorStop(0, lighten(car.color, 30));
+        bodyGradient.addColorStop(0.52, car.color);
+        bodyGradient.addColorStop(1, darken(car.color, 26));
+        ctx.fillStyle = bodyGradient;
+        roundRect(-car.w / 2, -car.h / 2, car.w, car.h, 14);
+
+        ctx.fillStyle = "rgba(255,255,255,0.18)";
+        roundRect(-car.w * 0.31, -car.h * 0.36, car.w * 0.62, car.h * 0.18, 8);
+        ctx.fillStyle = "rgba(5,12,21,0.72)";
+        roundRect(-car.w * 0.28, -car.h * 0.12, car.w * 0.56, car.h * 0.24, 8);
+        ctx.fillStyle = car.trim;
+        ctx.globalAlpha = 0.84;
+        roundRect(-car.w * 0.38, -car.h * 0.47, car.w * 0.2, car.h * 0.05, 4);
+        roundRect(car.w * 0.18, -car.h * 0.47, car.w * 0.2, car.h * 0.05, 4);
+        ctx.globalAlpha = 1;
+
+        if (!player) {
+          ctx.fillStyle = "#ff283d";
+          roundRect(-car.w * 0.36, car.h * 0.43, car.w * 0.18, car.h * 0.05, 4);
+          roundRect(car.w * 0.18, car.h * 0.43, car.w * 0.18, car.h * 0.05, 4);
+        }
+
+        ctx.restore();
+      }
+
+      function drawEffects() {
+        for (const spark of game.sparks) {
+          ctx.globalAlpha = Math.max(0, spark.life * 2);
+          ctx.fillStyle = spark.color;
+          ctx.beginPath();
+          ctx.arc(spark.x, spark.y, 2 + spark.life * 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function drawNitroMeter() {
+        const x = 16;
+        const y = height - 24;
+        const w = Math.min(220, width * 0.42);
+        const h = 8;
+        ctx.fillStyle = "rgba(255,255,255,0.14)";
+        roundRect(x, y, w, h, 4);
+        ctx.fillStyle = game.nitroActive > 0 ? "#ffcf4a" : "#20e3b2";
+        roundRect(x, y, w * (game.nitro / 100), h, 4);
+      }
+
+      function drawLevelFlash() {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, game.levelFlash);
+        ctx.fillStyle = "rgba(3,8,14,0.22)";
+        ctx.fillRect(0, height * 0.38, width, 92);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "900 38px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("LEVEL " + game.level, width / 2, height * 0.38 + 58);
+        ctx.restore();
+      }
+
+      function roundRect(x, y, w, h, r) {
+        const radius = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.arcTo(x + w, y, x + w, y + h, radius);
+        ctx.arcTo(x + w, y + h, x, y + h, radius);
+        ctx.arcTo(x, y + h, x, y, radius);
+        ctx.arcTo(x, y, x + w, y, radius);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function lighten(hex, amount) {
+        return shade(hex, amount);
+      }
+
+      function darken(hex, amount) {
+        return shade(hex, -amount);
+      }
+
+      function shade(hex, amount) {
+        const n = parseInt(hex.slice(1), 16);
+        const r = Math.max(0, Math.min(255, (n >> 16) + amount));
+        const g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amount));
+        const b = Math.max(0, Math.min(255, (n & 255) + amount));
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      }
+
+      function frame(now) {
+        const dt = Math.min(0.033, (now - lastTime) / 1000 || 0);
+        lastTime = now;
+        update(dt);
+        draw();
+        animationId = requestAnimationFrame(frame);
+      }
+
+      function ensureAudio() {
+        if (audio) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const context = new AudioContext();
+        const master = context.createGain();
+        master.gain.value = muted ? 0 : 0.22;
+        master.connect(context.destination);
+
+        const engine = context.createOscillator();
+        const engineGain = context.createGain();
+        const filter = context.createBiquadFilter();
+        engine.type = "sawtooth";
+        engine.frequency.value = 62;
+        filter.type = "lowpass";
+        filter.frequency.value = 260;
+        engineGain.gain.value = 0;
+        engine.connect(filter);
+        filter.connect(engineGain);
+        engineGain.connect(master);
+        engine.start();
+
+        const musicGain = context.createGain();
+        musicGain.gain.value = 0.035;
+        musicGain.connect(master);
+        const musicNotes = [196, 246.94, 293.66, 369.99, 329.63, 246.94, 220, 293.66];
+        let step = 0;
+        const musicTimer = setInterval(() => {
+          if (!audio || muted || state === "menu") return;
+          const osc = context.createOscillator();
+          const gain = context.createGain();
+          osc.type = "triangle";
+          osc.frequency.value = musicNotes[step % musicNotes.length];
+          gain.gain.setValueAtTime(0.0001, context.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.32);
+          osc.connect(gain);
+          gain.connect(musicGain);
+          osc.start();
+          osc.stop(context.currentTime + 0.36);
+          step += 1;
+        }, 360);
+
+        audio = { context, master, engine, engineGain, filter, musicTimer };
+      }
+
+      function setMuted(value) {
+        muted = value;
+        localStorage.setItem(storage.muted, String(muted));
+        ui.soundButton.textContent = muted ? "×" : "♪";
+        if (audio) audio.master.gain.setTargetAtTime(muted ? 0 : 0.22, audio.context.currentTime, 0.03);
+      }
+
+      function setEngine(on) {
+        if (!audio) return;
+        const target = on && !muted ? 0.16 : 0.0001;
+        audio.engineGain.gain.setTargetAtTime(target, audio.context.currentTime, 0.08);
+      }
+
+      function updateEnginePitch() {
+        if (!audio || state !== "playing") return;
+        const pitch = 62 + game.level * 8 + game.nitroActive * 70 + Math.abs(game.player.vx) * 0.035;
+        audio.engine.frequency.setTargetAtTime(pitch, audio.context.currentTime, 0.05);
+        audio.filter.frequency.setTargetAtTime(260 + game.nitroActive * 560, audio.context.currentTime, 0.08);
+      }
+
+      function playBeep(freq, duration, type, volume) {
+        if (!audio || muted) return;
+        const { context, master } = audio;
+        const osc = context.createOscillator();
+        const gain = context.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(volume, context.currentTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(master);
+        osc.start();
+        osc.stop(context.currentTime + duration + 0.03);
+      }
+
+      function playCoin() {
+        playBeep(880, 0.1, "sine", 0.08);
+        setTimeout(() => playBeep(1320, 0.08, "sine", 0.06), 70);
+      }
+
+      function playCrash() {
+        if (!audio || muted) return;
+        const { context, master } = audio;
+        const buffer = context.createBuffer(1, context.sampleRate * 0.55, context.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+        const source = context.createBufferSource();
+        const gain = context.createGain();
+        const filter = context.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.value = 760;
+        gain.gain.value = 0.34;
+        source.buffer = buffer;
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(master);
+        source.start();
+      }
+
+      function bindInput() {
+        window.addEventListener("keydown", event => {
+          if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(event.key)) event.preventDefault();
+          if (event.key === "p" || event.key === "P" || event.key === "Escape") {
+            state === "playing" ? pauseGame() : resumeGame();
+            return;
+          }
+          keys.add(event.key);
+        });
+        window.addEventListener("keyup", event => keys.delete(event.key));
+
+        document.querySelectorAll(".touchButton").forEach(button => {
+          const key = button.dataset.key;
+          const press = event => {
+            event.preventDefault();
+            ensureAudio();
+            keys.add(key);
+          };
+          const release = event => {
+            event.preventDefault();
+            keys.delete(key);
+          };
+          button.addEventListener("pointerdown", press);
+          button.addEventListener("pointerup", release);
+          button.addEventListener("pointercancel", release);
+          button.addEventListener("pointerleave", release);
+        });
+
+        document.getElementById("startButton").addEventListener("click", startRace);
+        document.getElementById("restartButton").addEventListener("click", startRace);
+        document.getElementById("pauseRestartButton").addEventListener("click", startRace);
+        document.getElementById("resumeButton").addEventListener("click", resumeGame);
+        document.getElementById("changeCarButton").addEventListener("click", () => {
+          state = "menu";
+          showOnly(ui.startOverlay);
+          updateHud();
+        });
+        ui.pauseButton.addEventListener("click", () => state === "playing" ? pauseGame() : resumeGame());
+        ui.soundButton.addEventListener("click", () => {
+          ensureAudio();
+          setMuted(!muted);
+        });
+        document.getElementById("resetBestButton").addEventListener("click", () => {
+          highScore = 0;
+          bankCoins = 0;
+          localStorage.setItem(storage.best, "0");
+          localStorage.setItem(storage.coins, "0");
+          updateHud();
+        });
+      }
+
+      function init() {
+        renderCarChoices();
+        bindInput();
+        setMuted(muted);
+        resize();
+        resetGame();
+        showOnly(ui.startOverlay);
+        lastTime = performance.now();
+        animationId = requestAnimationFrame(frame);
+      }
+
+      window.addEventListener("resize", resize);
+      window.addEventListener("blur", () => {
+        if (state === "playing") pauseGame();
+      });
+      window.addEventListener("beforeunload", () => cancelAnimationFrame(animationId));
+
+      init();
+    })();
+  </script>
+</body>
+</html>
